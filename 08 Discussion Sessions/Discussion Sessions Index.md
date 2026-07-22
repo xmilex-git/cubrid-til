@@ -13,7 +13,7 @@ visibility: internal
 
 ## Completed
 
-완료된 세션이 없다.
+- [[2026-07-22-001 CUBRID 전체 구조]] — CAS–broker–server 3-tier, 실제 접속 흐름과 CAS–server의 `SELECT` 처리 경계를 확정했다.
 
 ## Related
 
