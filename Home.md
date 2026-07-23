@@ -5,7 +5,7 @@ visibility: internal
 
 # CUBRID TIL
 
-CUBRID 및 DBMS 개발 경험이 없는 백엔드 개발자가 CUBRID 코드, 개발 프로세스, 운영 관례를 이해할 수 있도록 축적하는 지식 그래프다.
+CUBRID 및 DBMS 개발 경험이 없는 개발자가 CUBRID 코드, 개발 프로세스, 운영 관례를 이해할 수 있도록 축적하는 지식 그래프다.
 
 ## 학습 지도
 
