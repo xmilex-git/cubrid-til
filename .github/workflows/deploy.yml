@@ -73,6 +73,28 @@ jobs:
           sed -i 's#^\(\s*baseUrl:\).*#\1 xmilex-git.github.io/cubrid-til#' quartz.config.yaml
           # 외부 analytics 스크립트 주입 비활성화
           sed -i 's#provider: plausible#provider: null#' quartz.config.yaml
+          # 한글 고정폭 코드 폰트(D2Coding)를 self-host 한다.
+          # 노트의 box-drawing ASCII art가 한글(2칸)+선문자(1칸)로 정렬되어 있어
+          # 한글 글리프가 없는 IBM Plex Mono로는 정렬이 깨진다. D2Coding은 RMS 0px 정렬.
+          mkdir -p quartz/static/fonts
+          curl -fsSL -o quartz/static/fonts/d2coding.woff2 \
+            "https://cdn.jsdelivr.net/gh/wan2land/d2coding@master/fonts/d2coding-full.woff2"
+          # Google Fonts 요청은 그대로 두고(header/body 유지), 코드 폰트만 override.
+          # :root:root 는 Quartz가 주입하는 :root --codeFont 보다 특이도가 높아 항상 이긴다.
+          cat >> quartz/styles/custom.scss <<'CSS'
+          
+          // --- CUBRID TIL: 한글 고정폭 코드 폰트 (ASCII art 정렬용) ---
+          @font-face {
+            font-family: "D2Coding";
+            src: url("https://xmilex-git.github.io/cubrid-til/static/fonts/d2coding.woff2") format("woff2");
+            font-weight: 400 700;
+            font-style: normal;
+            font-display: swap;
+          }
+          :root:root {
+            --codeFont: "D2Coding", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+          }
+          CSS
 
       - name: Install dependencies
         run: cd quartz && npm ci
