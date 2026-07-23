@@ -10,7 +10,7 @@ sync-status: clean
 
 ## 현재 세션
 
-진행 중인 세션이 없다. 최근 완료 세션은 [[2026-07-23-005 Buffer manager page fix와 latch]]다.
+진행 중인 세션이 없다. 최근 완료 세션은 [[2026-07-23-006 Main iteration 종료와 post-processing 경계]]다.
 
 ## BFS Frontier
 
@@ -18,13 +18,13 @@ sync-status: clean
 |---|---|---:|---|---|---:|---|
 | CUBRID 전체 구조 | engine | 0 | - | - | 1 | completed |
 | [[Page fix와 page latch]] | engine | 1 | CUBRID 전체 구조 | P0 | 2 | completed |
-| Broker의 CAS 할당과 연결 인계 | engine | 1 | CUBRID 전체 구조 | P2 | 3 | frontier |
+| Broker의 CAS 할당과 연결 인계 | engine | 1 | CUBRID 전체 구조 | P2 | 4 | frontier |
 | SELECT SQL 실행 경로 | engine | 1 | [[CAS와 server의 SELECT 처리 경계]] | - | 1 | completed |
 | [[Query executor의 main block 실행]] | engine | 2 | [[CAS와 server의 SELECT 처리 경계]] | - | 1 | completed |
 | CUBRID 개발·테스트 흐름 | development | 0 | - | - | 3 | completed |
-| C/C++ compiler portability와 GCC-Clang 차이 | development | 1 | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | P1 | 2 | frontier |
+| C/C++ compiler portability와 GCC-Clang 차이 | development | 1 | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | P1 | 3 | frontier |
 | CTP suite별 책임과 testcase 형식 | development | 1 | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | P2 | 1 | frontier |
-| CUBRID 구성과 서버 생명주기 | operations | 0 | - | P1 | 5 | frontier |
+| CUBRID 구성과 서버 생명주기 | operations | 0 | - | P1 | 6 | frontier |
 
 ## 후속 주제 큐
 
@@ -51,7 +51,7 @@ sync-status: clean
 | DDL/DML의 CAS–server 처리 변형 | engine | 2 | P2 | [[2026-07-22-001 CUBRID 전체 구조]] | SELECT와 다른 generation·execution 경로를 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
 | XASL cache hit와 recompile 생명주기 | engine | 2 | P2 | [[2026-07-22-001 CUBRID 전체 구조]] | prepare/cache timing과 plan 재사용·무효화 조건을 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
 | View query pushability 판단 | engine | 2 | P2 | [[2026-07-23-001 SELECT SQL 실행 경로]] | `mq_is_pushable_subquery()`의 direct merge와 derived-table 보존 조건을 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
-| Main iteration 종료와 post-processing 경계 | engine | 3 | P2 | [[2026-07-23-003 Query executor main block]] | `qexec_end_mainblock_iterations()`을 어느 실행 구간에 포함할지와 analytic function 최적화 예외를 검증한다. | [[Query executor의 main block 실행]] | 1 | queued |
+| Main iteration 종료와 post-processing 경계 | engine | 3 | P2 | [[2026-07-23-003 Query executor main block]], [[2026-07-23-006 Main iteration 종료와 post-processing 경계]] | `qexec_end_mainblock_iterations()`을 어느 실행 구간에 포함할지와 analytic function 최적화 예외를 검증한다. | [[Query executor의 main block 실행]] | 2 | completed |
 | Result fetch pagination과 overflow tuple | engine | 2 | P2 | [[2026-07-23-001 SELECT SQL 실행 경로]] | `CAS_FC_FETCH`의 page 추가 요청, cursor buffer와 overflow tuple 처리를 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
 | CTP suite별 책임과 testcase 형식 | development | 1 | P2 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | SQL·medium·shell·CCI category의 책임과 testcase 작성 단위를 검증한다. | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | 1 | frontier |
 | QA Home Verify Status와 unstable 판정 기준 | operations | 1 | P2 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | 신규 failure의 unstable·test error·engine regression 판정과 상태값 의미를 검증한다. | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]], CUBRID 구성과 서버 생명주기 | 1 | queued |
@@ -72,7 +72,7 @@ sync-status: clean
 | [[CAS와 server의 SELECT 처리 경계]] | [[2026-07-23-001 SELECT SQL 실행 경로]] | partially-verified |
 | [[CUBRID 개발 이슈에서 릴리즈까지]] | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | partially-verified |
 | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | partially-verified |
-| [[Query executor의 main block 실행]] | [[2026-07-23-003 Query executor main block]] | partially-verified |
+| [[Query executor의 main block 실행]] | [[2026-07-23-003 Query executor main block]], [[2026-07-23-006 Main iteration 종료와 post-processing 경계]] | partially-verified |
 | [[Scan block]] | [[2026-07-23-003 Query executor main block]] | partially-verified |
 | [[Page fix와 page latch]] | [[2026-07-23-005 Buffer manager page fix와 latch]] | partially-verified |
 | [[Page latch promotion 호출 경로]] | [[2026-07-23-005 Buffer manager page fix와 latch]] | partially-verified |
@@ -91,12 +91,14 @@ sync-status: clean
 | [[2026-07-23-004 PR 기반 후속 주제 우선순위 재정비]] | C/C++ compiler portability와 GCC-Clang 차이 | development | deferred |
 | [[2026-07-23-004 PR 기반 후속 주제 우선순위 재정비]] | CUBRID 구성과 서버 생명주기 | operations | deferred |
 | [[2026-07-23-005 Buffer manager page fix와 latch]] | [[Page fix와 page latch]] | engine | selected |
+| [[2026-07-23-006 Main iteration 종료와 post-processing 경계]] | Main iteration 종료와 post-processing 경계 | engine | selected |
 
 결과는 `selected`, `deferred`, `rejected` 중 하나이며 이력에서 삭제하지 않는다.
 
 ## 보류 및 미해결 질문
 
-- 진행 중인 session 질문은 없다. `pgbuf_wakeup_reader_writer()`의 “head readers” 주석과 WRITE를 건너뛰는 loop 동작의 의도는 미확인이다.
+- 진행 중인 session 질문은 없다.
+- `pgbuf_wakeup_reader_writer()`의 “head readers” 주석과 WRITE를 건너뛰는 loop 동작의 의도는 미확인이다.
 - `PGBUF_PROMOTE_SHARED_READER`가 기다리는 동안 page 내용이 바뀔 때 caller별 재검증 범위와 workload별 promotion 빈도는 미확인이다.
 - PR #7516과 #7504는 2026-07-23 기준 open이므로 merge 전후 구현 변화와 공식 release 포함 여부를 각 주제 학습 시 다시 확인한다.
-- source checkout `e1e81d600f604d0fc22ded3066186a1a9aaec184`는 `origin/develop`보다 10 commit 뒤처지고 사용자 변경이 있어 pull하지 않았다. PR #7487 merge 결과도 이 checkout에는 아직 반영되지 않았다.
+- source checkout `e1e81d600f604d0fc22ded3066186a1a9aaec184`는 `origin/develop`보다 11 commit 뒤처지고 사용자 변경이 있어 pull하지 않았다. PR #7487 merge 결과도 이 checkout에는 아직 반영되지 않았다.

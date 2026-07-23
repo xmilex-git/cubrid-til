@@ -19,6 +19,7 @@ visibility: internal
 - [[2026-07-23-003 Query executor main block]] — partitioned NL join의 scan block 조합, 세 child pointer, 현업 실행 용어와 `qualified_block`을 정리했다.
 - [[2026-07-23-004 PR 기반 후속 주제 우선순위 재정비]] — 최근 본인 PR과 현재 코드를 대조해 후속 큐를 P0–P3로 재정렬하고 BFS 선수 관계를 보강했다.
 - [[2026-07-23-005 Buffer manager page fix와 latch]] — 두 fix count, atomic-latch READ fast path, waiter barrier, promotion caller와 dirty 책임을 코드로 검증했다.
+- [[2026-07-23-006 Main iteration 종료와 post-processing 경계]] — row 단위 `end-one-iteration`, main procedure block 단위 `main iteration 종료`, source 제어 구간인 `post-processing`을 구분하고 analytic 최적화의 실행 위치 예외를 확정했다.
 
 ## Related
 

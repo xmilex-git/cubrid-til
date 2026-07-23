@@ -1,6 +1,6 @@
 ---
 type: code-walkthrough
-aliases: [execute_mainblock, qexec_execute_mainblock, query executor, NL join, scan, aptr_list, dptr_list]
+aliases: [execute_mainblock, qexec_execute_mainblock, query executor, NL join, scan, aptr_list, dptr_list, qexec_end_one_iteration, end-one-iteration]
 visibility: internal
 learning-status: completed
 knowledge-status: partially-verified
@@ -30,7 +30,8 @@ qexec_execute_mainblock()
    │  └─ scan block iteration
    │     ├─ main XASL의 앞쪽 scan
    │     ├─ scan_ptr의 후행 SCAN_PROC를 통한 NL join
-   │     └─ row·predicate 평가와 tuple 생성
+   │     └─ row·predicate 평가
+   │        └─ end-one-iteration: qualified candidate row의 결과 처리
    ├─ main iteration 종료
    └─ post-processing
       ├─ GROUP BY
@@ -39,6 +40,8 @@ qexec_execute_mainblock()
 ```
 
 이 구분은 모든 statement type에 똑같이 적용되는 별도 subsystem이 아니다. `UPDATE_PROC`, `DELETE_PROC`, `INSERT_PROC` 등은 type switch에서 전용 executor로 빠지고, 위 흐름은 `BUILDLIST_PROC`, `BUILDVALUE_PROC` 같은 SELECT 계열 main block을 이해할 때 가장 직접적이다.
+
+이 단계 모델의 canonical 적용 범위는 `qexec_execute_mainblock_internal()`의 일반 SELECT 계열 경로다. `CONNECT BY`와 `BUILD_SCHEMA_PROC`의 전용 executor도 `qexec_end_one_iteration()` 또는 `qexec_end_mainblock_iterations()` 같은 helper를 재사용하지만 자체 반복과 후속 처리 흐름을 가진다. 공통 helper 호출만을 근거로 전용 executor를 위 단계 모델에 억지로 맞추지 않는다.
 
 ### 세 child pointer의 실행 의미
 
@@ -103,6 +106,17 @@ pre-processing
   → post-processing
 ```
 
+`scan block iteration`은 `intprt_fnc` 내부의 반복으로 한정한다. `qexec_end_mainblock_iterations()`는 그 반복의 일부나 단순 scan cleanup이 아니라, `intprt_fnc` 뒤에서 proc type별 결과를 확정하는 독립적인 **`main iteration 종료`** 단계다. Source의 `Post_processing`은 이 함수가 성공한 다음 시작한다.
+
+이름이 비슷한 두 종료 단위는 다음처럼 구분한다.
+
+| 현업 용어 | 실제 symbol | 실행 단위 | 호출 시점 |
+|---|---|---|---|
+| `end-one-iteration` | `qexec_end_one_iteration()` | qualified candidate row 한 건 | row의 predicate 평가가 끝난 뒤 결과 tuple을 처리할 때 |
+| `main iteration 종료` | `qexec_end_mainblock_iterations()` | main procedure block 전체 | `intprt_fnc`와 scan close가 끝난 뒤 proc별 결과를 확정할 때 |
+
+두 이름을 바꾸어 쓰지 않는다. 특히 `end-one-iteration`의 `iteration`은 row 한 건의 처리 단위이고, `main iteration 종료`의 `iteration`은 main procedure block의 전체 실행 반복을 가리킨다.
+
 ### pre-processing
 
 `intprt_fnc`를 호출하기 전에 입력과 실행 상태를 준비한다.
@@ -117,6 +131,26 @@ pre-processing
 ### intprt_fnc (interpreter function)
 
 `qexec_execute_mainblock_internal()`은 일반 scan path의 `func_vector[0]`에 `qexec_intprt_fnc`를 넣어 호출한다. `intprt_fnc`는 scan block의 row와 predicate를 평가해 main result를 만드는 주 interpreter function이다.
+
+#### end-one-iteration
+
+현업에서는 `qexec_end_one_iteration()`을 **`end-one-iteration`**이라는 이름으로 직접 부른다. 이는 전체 scan block iteration이나 main procedure block의 종료가 아니라, `intprt_fnc`에서 **한 candidate row의 predicate 평가가 끝나고 qualified된 뒤 결과 row 하나를 처리하는 함수**다.
+
+주요 순서는 다음과 같다.
+
+```text
+candidate row scan
+  → dptr / after_join_pred / if_pred / fptr 평가
+  → qualified
+  → inst_num predicate 평가
+  → end-one-iteration
+      ├─ 최적화된 analytic function의 row별 평가
+      ├─ tuple descriptor 생성
+      ├─ Top-N 또는 hash GROUP BY 처리
+      └─ result list에 tuple 생성·추가
+```
+
+Source 주석도 이를 `Processing to be accomplished when a candidate row has been qualified`라고 정의한다. 특히 analytic 최적화 flag가 있으면 `qexec_analytic_eval_in_processing()`이 tuple descriptor 생성과 result list 삽입보다 먼저 호출된다.
 
 ### scan block iteration
 
@@ -201,17 +235,55 @@ t1p2                  ───> t2p1 → t2p2
 
 예를 들어 `t1p1`의 모든 row가 `t1` level에서 탈락하면, 초기화 과정에서 `t2p1`이 이미 선택·open됐더라도 그 row scan은 구동되지 않는다. 다음 iteration도 `t1p1-t2p2`로 전개하지 않는다. `qexec_next_scan_block_iterations()`은 `t1p1.qualified_block == false`를 보고 `t1p2`로 직접 전진한다. 반면 `t1p1`에서 한 row라도 inner scan을 구동했다면 `qualified_block == true`다. `t2`에서 최종 join row가 한 건도 나오지 않더라도 `t1p1`과 각 `t2` partition block의 조합은 평가 대상이 될 수 있다.
 
-scan 종료 후 `qexec_end_mainblock_iterations()`가 list close, BUILDVALUE aggregate finalize, set operation 결합과 merge/hash join 결과 생성 등 main iteration을 마감한다.
+`intprt_fnc`가 끝난 뒤 `qexec_end_mainblock_iterations()`가 list close, BUILDVALUE aggregate finalize, set operation 결합과 merge/hash join 결과 생성 등 main iteration 결과를 확정한다. 이 호출은 `scan block iteration`에 포함하지 않고 `main iteration 종료`라는 독립 단계로 구분한다.
 
 ### post-processing
 
-main iteration이 만든 result list를 최종 형태로 변환한다.
+`post-processing`은 `qexec_end_mainblock_iterations()`가 성공한 뒤 source의 `Post_processing` comment부터 시작하는 **main block의 제어 구간**이다. 모든 후처리 계산이 오직 이 위치에서만 수행된다는 뜻은 아니다.
 
 1. `GROUP BY`
 2. analytic function
 3. `ORDER BY`와 `DISTINCT`
 
-일부 최적화는 이 도식의 경계를 넘는다. 예를 들어 analytic function 일부는 limit 최적화를 위해 `intprt_fnc` 안에서 평가될 수 있다. 따라서 이 용어들은 모든 SQL 연산을 배타적으로 분류하는 보편 pipeline이 아니라 main block의 주 제어를 설명한다.
+여기서는 다음 두 관점을 분리한다.
+
+- **논리적 소속:** main iteration이 만든 row 집합 전체를 기준으로 GROUP BY, analytic, 정렬, 중복 제거 같은 최종 결과 변환을 수행하므로 후처리 연산이다.
+- **실제 계산 위치:** 최적화가 없으면 post-processing 제어 구간에서 계산하지만, 입력 순서나 LIMIT 조건을 이용할 수 있으면 row 단위 `end-one-iteration`에서 상태 누적이나 결과 계산을 미리 수행할 수 있다.
+
+즉, 최적화가 실행 위치를 앞당겨도 해당 연산의 논리적 의미가 scan predicate나 NL join으로 바뀌지는 않는다. 반대로 source의 `Post_processing` 구간에 함수 호출이 남아 있다는 사실만으로 모든 계산이 그 시점에 처음 시작된다고 볼 수도 없다.
+
+Analytic function은 이 차이를 보여 주는 대표 사례다.
+
+- 기본 경로: post-processing의 `qexec_execute_analytic()`에서 입력 list를 scan·sort하고 analytic 결과 list를 만든다.
+- `XASL_ANALYTIC_SKIP_SORT`: 입력이 analytic sort 순서를 이미 만족하므로, `end-one-iteration`의 `qexec_analytic_eval_in_processing()`에서 row별 상태를 누적한다. Post-processing의 `qexec_execute_analytic()`은 누적 상태와 기존 list를 이용해 group 결과를 확정한다.
+- `XASL_ANALYTIC_USES_LIMIT_OPT`: `ROW_NUMBER`, `RANK`, `DENSE_RANK`와 제한된 `FIRST_VALUE`처럼 허용된 function을 `end-one-iteration`에서 평가한다. Post-processing에서도 `qexec_execute_analytic()` 호출 자체는 남지만 limit optimization flag를 보고 실질적인 analytic list 처리 없이 wrapup으로 이동한다.
+
+| 경로 | `end-one-iteration` | `main iteration 종료` 뒤의 post-processing |
+|---|---|---|
+| 기본 analytic | 결과 row를 list에 기록 | list를 scan·sort하며 analytic 값을 계산하고 결과 list로 교체 |
+| analytic skip-sort | 입력 순서를 따라 analytic 상태를 row마다 누적 | 남은 group을 확정하고 누적 결과를 기존 list에 반영 |
+| analytic limit optimization | 허용된 analytic function을 row마다 평가하며 필요한 row까지만 읽을 수 있게 함 | analytic executor 호출은 남지만 실질적인 list scan·sort를 건너뜀 |
+
+구체적으로 `ROW_NUMBER() OVER (ORDER BY c1)`을 생각할 수 있다.
+
+1. 적합한 index 순서를 활용하지 않는 기본 경로에서는 `end-one-iteration`이 candidate row를 result list에 쌓는다.
+2. `main iteration 종료`가 list를 닫아 main result를 확정한다.
+3. Post-processing의 analytic executor가 list를 정렬·scan해 `ROW_NUMBER` 결과를 만든다.
+
+반대로 optimizer가 index 순서가 analytic sort 순서를 만족한다고 판단하면 `XASL_ANALYTIC_SKIP_SORT`가 설정될 수 있다. 이때는 각 qualified candidate row가 `end-one-iteration`에 들어올 때 analytic 상태를 누적하므로 별도 analytic sort가 필요 없다. LIMIT 최적화까지 가능하면 `ROW_NUMBER`, `RANK`, `DENSE_RANK`와 조건을 만족하는 `FIRST_VALUE`는 필요한 row 범위까지만 읽도록 `end-one-iteration`에서 평가할 수 있다.
+
+```cpp
+/* qexec_end_one_iteration(): qualified candidate row의 결과 처리 */
+if (XASL_IS_FLAGED (xasl, XASL_ANALYTIC_USES_LIMIT_OPT)
+    || XASL_IS_FLAGED (xasl, XASL_ANALYTIC_SKIP_SORT))
+  {
+    qexec_analytic_eval_in_processing (thread_p, xasl, xasl_state);
+  }
+
+/* 그 다음 tuple descriptor 생성과 result list 처리가 이어진다. */
+```
+
+따라서 “analytic function은 항상 post-processing에서 실행된다”라고 설명하지 않는다. **논리적으로는 후처리 연산이지만, 최적화에 따라 실제 analytic 평가는 row 단위 `end-one-iteration`에서 처리될 수 있다.** 이 단계 용어들은 모든 SQL 연산을 배타적인 물리 실행 위치에 가두는 pipeline이 아니라 main block의 주 제어와 일반 책임을 설명한다.
 
 ## 구체적인 시나리오
 
@@ -258,11 +330,29 @@ scan block을 공급하던 현재 물리 partition이 끝나면 `qexec_next_scan
 - `qexec_intprt_fnc()`과 `qexec_execute_scan()`은 현재 XASL node의 row가 `scan_ptr`의 후행 `SCAN_PROC`를 구동하기 직전에 현재 `SCAN_ID::qualified_block = true`로 설정한다.
 - `qexec_next_scan_block_iterations()`은 `qualified_block == false`인 현재 block이 더 뒤쪽 `SCAN_PROC`의 어떤 block과 조합되어도 기여하지 못한다고 보고, 현재 XASL node의 다음 block으로 직접 이동한다.
 - 따라서 `qualified_block`은 final join output flag나 단순 physical-row-exists flag가 아니라, 현재 XASL node의 block 아래에서 후행 `SCAN_PROC` block 조합을 계속 실행할지 결정하는 flag다.
+- `qexec_end_one_iteration()`은 qualified candidate row 하나에 대해 analytic 최적화 평가, tuple descriptor 생성, Top-N·hash GROUP BY와 result list tuple 처리를 수행한다.
+- `XASL_ANALYTIC_USES_LIMIT_OPT` 또는 `XASL_ANALYTIC_SKIP_SORT`가 설정되면 `qexec_end_one_iteration()` 안에서 `qexec_analytic_eval_in_processing()`이 호출된다.
+- Post-processing의 `qexec_execute_analytic()`은 limit optimization 경로에서는 analytic state 초기화 뒤 실질적인 list 처리 없이 wrapup하고, skip-sort 경로에서는 processing 중 누적한 상태를 사용해 결과를 확정한다.
+- `qexec_execute_connect_by()`, `qexec_execute_build_indexes()`, `qexec_execute_build_columns()`도 공통 iteration 종료 helper를 호출하지만 일반 SELECT 계열의 공통 `Post_processing` 제어 구간과 다른 전용 흐름을 사용한다.
 
 ## 코드 근거
 
 **출처:** `src/query/xasl.h:XASL_NODE`
 **기준 commit:** `e1e81d600f604d0fc22ded3066186a1a9aaec184`
+
+```cpp
+/* end main block iterations */
+if (qexec_end_mainblock_iterations (thread_p, xasl, xasl_state, &tplrec) != NO_ERROR)
+  {
+    ...
+  }
+
+/*
+ * Post_processing
+ */
+```
+
+이 순서와 `qexec_end_mainblock_iterations()`의 proc type별 switch를 근거로 `main iteration 종료`와 `post-processing`을 구분한다.
 
 ```cpp
 XASL_NODE *aptr_list; /* CTEs and uncorrelated subquery */
@@ -412,6 +502,9 @@ scan_reset_scan_block (thread_p, &xasl->scan_ptr->curr_spec->s_id);
 
 - `978b628c8a` 이전: regu-linked uncorrelated scalar subquery는 predicate가 값을 fetch할 때 lazy 실행됐다.
 - `978b628c8a` 이후 현재 develop: `precomp_owner_regu`가 있는 scalar `aptr`는 consuming scan open 전에 main thread에서 eager precompute된다. 이 commit은 현재 checkout 기준 아직 공식 release 번호를 확인하지 않았으므로 release 기반 `recent` 분류 대신 unreleased develop 변화로 기록한다.
+- Analytic evaluation을 `qexec_end_one_iteration()`으로 앞당기는 기반은 commit `a2a897eb29106c57abdd7b4f18cb35afd5adce32`(2026-01-08)에 추가됐다.
+- Analytic skip-sort는 commit `1cdd023033bf7284b16242f790ad6e4e373a1918`(2026-03-11), limit optimization은 commit `f868d03d5cf94ea6b6f48a9d463d5ceb11050076`(2026-04-01)에 추가됐다.
+- 두 최적화 commit은 repository tag `v11.4.5.1898`에 포함되지만, 이 tag를 공식 release tag `v11.4.5`와 동일시하지 않는다. 현재 확인한 공식 release에는 포함 여부를 확정할 수 없으므로 analytic 최적화 세부 동작은 release 기반 `recent`로 분류하지 않고 **unreleased develop 변화**로 기록한다. Main block의 기본 실행 구조 자체는 historical이다.
 
 ## 관련 지식
 
@@ -423,3 +516,4 @@ scan_reset_scan_block (thread_p, &xasl->scan_ptr->curr_spec->s_id);
 - 관련 지식: NL join 종류별 scan block 종료
 - 관련 지식: [[Scan block]]
 - 토론 기록: [[2026-07-23-003 Query executor main block]]
+- 토론 기록: [[2026-07-23-006 Main iteration 종료와 post-processing 경계]]
