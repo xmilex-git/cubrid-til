@@ -1,0 +1,96 @@
+name: Deploy Quartz site to GitHub Pages
+
+# 이 저장소(볼트)의 노트는 그대로 두고, CI에서 Quartz(v5)를 별도로 clone해
+# content로 주입 -> 빌드 -> GitHub Pages 배포한다. main에 push될 때마다 자동 갱신된다.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout TIL vault
+        uses: actions/checkout@v4
+        with:
+          path: vault
+          fetch-depth: 0
+
+      - name: Checkout Quartz v5
+        uses: actions/checkout@v4
+        with:
+          repository: jackyzha0/quartz
+          ref: v5
+          path: quartz
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Inject vault notes into Quartz content
+        run: |
+          set -euo pipefail
+          rm -rf quartz/content
+          mkdir -p quartz/content
+          # 지식 노트만 발행한다. 에이전트/스킬/템플릿 등 인프라 파일은 제외한다.
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.agents' \
+            --exclude '.claude' \
+            --exclude 'Templates' \
+            --exclude 'AGENTS.md' \
+            --exclude '.gitignore' \
+            vault/ quartz/content/
+          # Home.md를 사이트 첫 페이지(index)로 매핑한다. (볼트 원본은 건드리지 않음)
+          if [ -f "quartz/content/Home.md" ]; then
+            mv "quartz/content/Home.md" "quartz/content/index.md"
+          fi
+
+      - name: Configure Quartz
+        run: |
+          set -euo pipefail
+          cd quartz
+          cp quartz.config.default.yaml quartz.config.yaml
+          # 사이트 제목 / 배포 도메인(프로젝트 페이지) 설정
+          sed -i 's#^\(\s*pageTitle:\).*#\1 CUBRID TIL#' quartz.config.yaml
+          sed -i 's#^\(\s*baseUrl:\).*#\1 xmilex-git.github.io/cubrid-til#' quartz.config.yaml
+          # 외부 analytics 스크립트 주입 비활성화
+          sed -i 's#provider: plausible#provider: null#' quartz.config.yaml
+
+      - name: Install dependencies
+        run: cd quartz && npm ci
+
+      - name: Install Quartz plugins
+        run: cd quartz && npx quartz plugin install
+
+      - name: Build Quartz
+        run: cd quartz && npx quartz build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: quartz/public
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
