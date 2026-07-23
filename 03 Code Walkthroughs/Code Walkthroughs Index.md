@@ -11,6 +11,7 @@ visibility: internal
 
 - [[CAS와 server의 SELECT 처리 경계]] — CAS의 SQL compile과 server의 XASL execute 경계
 - [[Query executor의 main block 실행]] — `execute_mainblock`의 child, scan, 후처리 실행 단계
+- [[Page latch promotion 호출 경로]] — file 자동 확장과 B-tree split·merge에서 READ latch를 WRITE로 승격하는 12개 caller
 
 ## Related
 
