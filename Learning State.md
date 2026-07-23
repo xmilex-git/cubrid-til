@@ -2,7 +2,7 @@
 type: learning-state
 visibility: internal
 updated-at: 2026-07-23
-active-session: "[[2026-07-23-002 CUBRID 개발 테스트 흐름]]"
+active-session: null
 sync-status: clean
 ---
 
@@ -10,7 +10,7 @@ sync-status: clean
 
 ## 현재 세션
 
-[[2026-07-23-002 CUBRID 개발 테스트 흐름]] — development 트랙 깊이 0. 개발자가 engine 코드를 변경할 때의 테스트 선택·실행·PR 검증 흐름을 상담 중이다.
+진행 중인 세션 없음.
 
 ## BFS Frontier
 
@@ -19,7 +19,8 @@ sync-status: clean
 | CUBRID 전체 구조 | engine | 0 | - | 1 | completed |
 | Broker의 CAS 할당과 연결 인계 | engine | 1 | CUBRID 전체 구조 | 2 | frontier |
 | SELECT SQL 실행 경로 | engine | 1 | [[CAS와 server의 SELECT 처리 경계]] | 1 | completed |
-| CUBRID 개발·테스트 흐름 | development | 0 | - | 3 | selected |
+| CUBRID 개발·테스트 흐름 | development | 0 | - | 3 | completed |
+| CTP suite별 책임과 testcase 형식 | development | 1 | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | 1 | frontier |
 | CUBRID 구성과 서버 생명주기 | operations | 0 | - | 3 | frontier |
 
 ## 후속 주제 큐
@@ -32,6 +33,11 @@ sync-status: clean
 | Optimizer cost와 join enumeration | engine | 2 | [[2026-07-23-001 SELECT SQL 실행 경로]] | cardinality/cost 추정, access path 비교와 join 순서 탐색을 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
 | Scan manager와 access method 실행 | engine | 2 | [[2026-07-23-001 SELECT SQL 실행 경로]] | `qexec_open_scan()` 아래에서 heap/index scan이 열리고 tuple을 탐색·필터링하는 경로를 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
 | Result fetch pagination과 overflow tuple | engine | 2 | [[2026-07-23-001 SELECT SQL 실행 경로]] | `CAS_FC_FETCH`의 page 추가 요청, cursor buffer와 overflow tuple 처리를 검증한다. | [[CAS와 server의 SELECT 처리 경계]] | 1 | queued |
+| CTP suite별 책임과 testcase 형식 | development | 1 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | SQL·medium·shell·CCI category의 책임과 testcase 작성 단위를 검증한다. | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | 1 | frontier |
+| 누적 testcase lifecycle과 retirement | development | 2 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | Daily regression에 누적된 TC의 수정·비활성화·삭제 조건을 검증한다. | CTP suite별 책임과 testcase 형식 | 1 | queued |
+| 관리자 예외 merge 승인·사후 추적 | development | 2 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | Branch-protection 예외 merge의 승인 근거와 사후 기록을 검증한다. | [[CUBRID 개발 이슈에서 릴리즈까지]] | 1 | queued |
+| Release scope·stabilization·approval | development | 2 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | Closed issue가 정식 release에 포함되는 선별·branch·안정화·승인 과정을 검증한다. | [[CUBRID 개발 이슈에서 릴리즈까지]] | 1 | queued |
+| QA Home Verify Status와 unstable 판정 기준 | operations | 1 | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | 신규 failure의 unstable·test error·engine regression 판정과 상태값 의미를 검증한다. | [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]], CUBRID 구성과 서버 생명주기 | 1 | queued |
 
 `queued` 주제는 선수 지식이 완료되고 해당 BFS 깊이가 열릴 때 frontier로 승격한다. 같은 개념을 다시 언급하면 새 행을 만들지 않고 발견 세션과 언급 횟수를 갱신한다.
 
@@ -41,6 +47,8 @@ sync-status: clean
 |---|---|---|
 | [[CUBRID 3-tier 구조]] | [[2026-07-22-001 CUBRID 전체 구조]] | partially-verified |
 | [[CAS와 server의 SELECT 처리 경계]] | [[2026-07-23-001 SELECT SQL 실행 경로]] | partially-verified |
+| [[CUBRID 개발 이슈에서 릴리즈까지]] | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | partially-verified |
+| [[CUBRID 개발 변경의 테스트 계층과 PR 흐름]] | [[2026-07-23-002 CUBRID 개발 테스트 흐름]] | partially-verified |
 
 ## 이전 추천 결과
 
@@ -56,5 +64,4 @@ sync-status: clean
 
 ## 보류 및 미해결 질문
 
-- [[2026-07-23-002 CUBRID 개발 테스트 흐름]] Q1: 로컬 unit test부터 PR merge gate까지 end-to-end로 볼지, 특정 테스트 층부터 볼지 범위를 합의해야 한다.
-- Scan manager, fetch pagination, optimizer 심화와 cache/recompile은 후속 주제 큐에서 관리한다.
+- 진행 중인 미해결 질문 없음. 개발·테스트 심화와 engine 심화 항목은 BFS Frontier 및 후속 주제 큐에서 관리한다.
