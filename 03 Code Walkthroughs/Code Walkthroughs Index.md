@@ -10,6 +10,7 @@ visibility: internal
 ## Topics
 
 - [[CAS와 server의 SELECT 처리 경계]] — CAS의 SQL compile과 server의 XASL execute 경계
+- [[Query executor의 main block 실행]] — `execute_mainblock`의 child, scan, 후처리 실행 단계
 
 ## Related
 

@@ -9,7 +9,7 @@ visibility: internal
 
 ## Active
 
-진행 중인 세션이 없다.
+- [[2026-07-23-003 Query executor main block]] — `execute_mainblock`의 partition NL join, 세 child pointer와 실행 단계의 의미를 검증 중이다.
 
 ## Completed
 
