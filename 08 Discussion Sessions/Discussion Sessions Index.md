@@ -9,13 +9,14 @@ visibility: internal
 
 ## Active
 
-- [[2026-07-23-003 Query executor main block]] — `execute_mainblock`의 partition NL join, 세 child pointer와 실행 단계의 의미를 검증 중이다.
+진행 중인 세션이 없다.
 
 ## Completed
 
 - [[2026-07-22-001 CUBRID 전체 구조]] — CAS–broker–server 3-tier, 실제 접속 흐름과 CAS–server의 `SELECT` 처리 경계를 확정했다.
 - [[2026-07-23-001 SELECT SQL 실행 경로]] — CAS의 SQL compile 단계와 server의 XASL 실행 경계를 검증해 canonical note로 정제했다.
 - [[2026-07-23-002 CUBRID 개발 테스트 흐름]] — JIRA issue부터 release까지의 lifecycle과 CTP 중심 테스트 계층을 확정했다.
+- [[2026-07-23-003 Query executor main block]] — partitioned NL join의 scan block 조합, 세 child pointer, 현업 실행 용어와 `qualified_block`을 정리했다.
 
 ## Related
 

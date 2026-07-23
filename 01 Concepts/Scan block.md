@@ -1,7 +1,7 @@
 ---
 type: concept
 visibility: internal
-learning-status: in-progress
+learning-status: completed
 knowledge-status: partially-verified
 code-era: historical
 rationale-evidence: mixed

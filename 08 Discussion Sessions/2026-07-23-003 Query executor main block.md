@@ -1,7 +1,7 @@
 ---
 type: discussion-session
 visibility: internal
-session-status: in-progress
+session-status: completed
 started-at: 2026-07-23
 source-repository: https://github.com/CUBRID/cubrid
 source-branch: develop
@@ -92,7 +92,7 @@ source-commit: e1e81d600f604d0fc22ded3066186a1a9aaec184
 ### Q10. Scan block iteration 종료와 post-processing의 경계
 
 - 권장안: `intprt_fnc`가 끝난 뒤 호출되는 `qexec_end_mainblock_iterations()`까지를 scan block iteration의 종료 처리로 본다. 그 뒤 result list에 적용되는 GROUP BY·analytic·ORDER BY/DISTINCT를 `post-processing`으로 구분한다.
-- 합의: 답변 대기.
+- 합의: 이번 세션에서는 확정하지 않고 `Main iteration 종료와 post-processing 경계`라는 후속 주제로 큐에 올려 나중에 별도로 검증한다.
 - 근거: `qexec_execute_mainblock_internal()`은 scan 함수 실행과 scan close 뒤 `qexec_end_mainblock_iterations()`를 호출하고, 이후 GROUP BY·analytic·ORDER BY/DISTINCT 경로로 진행한다.
 - 예외: 일부 analytic function은 limit 최적화 때문에 `intprt_fnc` 안에서 평가될 수 있으므로, 모든 analytic evaluation이 물리적으로 이 경계 뒤에 있다고 일반화하지 않는다.
 
@@ -114,7 +114,6 @@ source-commit: e1e81d600f604d0fc22ded3066186a1a9aaec184
 
 - partition pruning으로 한쪽 partition list가 비거나 일부만 남을 때의 구체적인 예
 - `TYPE_LIST_ID` regu_var로 연결된 `IN 절`, `EXISTS 절`이 실제로 `aptr_list`에 배치되는 testcase 확인
-- main iteration 종료와 post-processing의 정확한 경계
 - 세 동작의 최초 공식 release
 
 ## 나중에 다룰 주제
@@ -125,11 +124,14 @@ source-commit: e1e81d600f604d0fc22ded3066186a1a9aaec184
 - Fixed/grouped/cached scan 정책 — page fix 수명과 driving/inner scan 제약은 main block의 기본 제어를 확정한 뒤 다룬다.
 - Grouped scan legacy code — 현재 `grouped_scan`이 항상 false인 이유, 남은 `HEAP_SCANRANGE`·grouped index code의 역사와 제거 가능성을 별도로 검증한다.
 - NL join 종류별 scan block 종료 — outer/semi/anti join에서 `qualified_block`, `single_fetch`, null-padding이 결합하는 규칙은 기본 inner NL join 모델을 확정한 뒤 다룬다.
+- Main iteration 종료와 post-processing 경계 — `qexec_end_mainblock_iterations()`을 어느 실행 구간에 포함할지와 analytic function 최적화 예외를 별도로 검증한다.
 
-## 재개 위치
+## 종료 상태
 
-Q10에서 `qexec_end_mainblock_iterations()`을 scan block iteration의 종료 처리로 두고, 그 호출 뒤부터 GROUP BY·analytic·ORDER BY/DISTINCT를 `post-processing`으로 구분할지 합의한다.
+원래 범위였던 partitioned NL join의 scan block 조합, `aptr_list`·`dptr_list`·`scan_ptr`, 현업 실행 용어와 `qualified_block`의 의미를 canonical note에 반영했다. Q10은 후속 주제로 이관하고 세션을 완료한다.
 
 ## 다음 후보
 
-현재 세션 진행 중. 완료 시 세 track에서 같은 깊이의 후보를 다시 계산한다.
+- engine: Broker의 CAS 할당과 연결 인계
+- development: CTP suite별 책임과 testcase 형식
+- operations: CUBRID 구성과 서버 생명주기
