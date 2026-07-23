@@ -74,8 +74,9 @@ jobs:
         run: cd quartz && npm ci
 
       - name: Install Quartz plugins
-        # fresh clone에는 quartz.lock.json이 없으므로 config yaml의 플러그인 목록으로 설치한다.
-        run: cd quartz && npx quartz plugin install --from-config
+        # 기본 플러그인은 @quartz-community/* npm 패키지(npm ci로 설치됨)다.
+        # 이 스크립트가 quartz.config.yaml을 읽어 .quartz/plugins 배늕을 생성한다.
+        run: cd quartz && npm run install-plugins
 
       - name: Build Quartz
         run: cd quartz && npx quartz build
