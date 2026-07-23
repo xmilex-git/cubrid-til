@@ -1,5 +1,6 @@
 ---
 type: process
+aliases: [JIRA, issue lifecycle, release, code review, squash merge, daily regression]
 visibility: internal
 learning-status: completed
 knowledge-status: partially-verified

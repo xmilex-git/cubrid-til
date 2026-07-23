@@ -1,5 +1,6 @@
 ---
 type: process
+aliases: [CTP, testcase, regression test, PR, CI, QA Home, unit test]
 visibility: internal
 learning-status: completed
 knowledge-status: partially-verified

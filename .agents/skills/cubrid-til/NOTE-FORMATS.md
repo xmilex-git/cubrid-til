@@ -5,6 +5,7 @@
 ```markdown
 ---
 type: concept # concept | architecture | code-walkthrough | process | operation | troubleshooting | glossary
+aliases: [] # 질문 검색용 영어 symbol·동의어 (예: [XASL, query plan])
 visibility: internal # public | internal | restricted
 learning-status: in-progress # in-progress | completed | reopened
 knowledge-status: partially-verified # verified | partially-verified | inferred | unknown
@@ -61,6 +62,8 @@ last-verified: 2026-07-22
 ```
 
 `code-era`는 최초 도입 기능이 포함된 공식 release 날짜를 기준으로 한다. 현재 동작 여부는 별도 `lifecycle: active | deprecated | removed | unknown` 필드를 필요할 때 추가한다.
+
+`aliases`에는 질문자가 쓸 법한 영어 용어와 핵심 C/C++ symbol을 넣는다. 제목이 한국어라서 영어 질문이 note를 찾지 못하는 것을 막는 검색 진입점이며, wikilink 대상은 아니다.
 
 ## Discussion session
 

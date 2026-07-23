@@ -1,5 +1,6 @@
 ---
 type: architecture
+aliases: [3-tier, CAS, broker, cub_cas, cub_broker, cub_server, architecture]
 visibility: internal
 learning-status: completed
 knowledge-status: partially-verified

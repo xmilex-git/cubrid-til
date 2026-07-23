@@ -1,5 +1,6 @@
 ---
 type: code-walkthrough
+aliases: [SELECT path, XASL, XASL to stream, prepare, execute, optimizer, query plan, CAS_FC_PREPARE, CAS_FC_EXECUTE]
 visibility: internal
 learning-status: completed
 knowledge-status: partially-verified

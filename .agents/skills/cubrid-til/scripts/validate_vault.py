@@ -135,6 +135,24 @@ def main() -> int:
             if normalized not in known:
                 errors.append(f"{relative}: unresolved wikilink [[{target}]]")
 
+    # Canonical notes in 01-07 must be reachable from their folder index.
+    # 08 sessions are indexed at session close and are exempt.
+    indexed_folder = re.compile(r"^0[1-7] ")
+    index_links: dict[Path, set[str]] = {}
+    for path, text in texts.items():
+        if frontmatter(text).get("type") == "index":
+            index_links.setdefault(path.parent, set()).update(
+                Path(target.strip()).name.casefold() for target in LINK_RE.findall(text)
+            )
+    for path, text in texts.items():
+        relative = path.relative_to(root)
+        if len(relative.parts) != 2 or not indexed_folder.match(relative.parts[0]):
+            continue
+        if frontmatter(text).get("type") == "index":
+            continue
+        if path.stem.casefold() not in index_links.get(path.parent, set()):
+            errors.append(f"{relative}: not linked from its folder index")
+
     state = root / "Learning State.md"
     if not state.exists():
         errors.append("Learning State.md: missing")
