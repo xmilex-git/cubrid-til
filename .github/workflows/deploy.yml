@@ -57,6 +57,10 @@ jobs:
           # Home.md를 사이트 첫 페이지(index)로 매핑한다. (볼트 원본은 건드리지 않음)
           if [ -f "quartz/content/Home.md" ]; then
             mv "quartz/content/Home.md" "quartz/content/index.md"
+            # 파일명 'index'가 제목이 되지 않도록 title 프론트매터 주입
+            if head -1 "quartz/content/index.md" | grep -q '^---'; then
+              sed -i '1a title: CUBRID TIL' "quartz/content/index.md"
+            fi
           fi
 
       - name: Configure Quartz
